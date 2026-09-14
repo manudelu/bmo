@@ -1,26 +1,34 @@
+#!/usr/bin/env python3
 import pygame
+import os
 
 pygame.init()
 
 # Freenove 5-inch resolution
-SCREEN_WIDTH, SCREEN_HEIGHT = 800, 400
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 480
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.NOFRAME | pygame.FULLSCREEN)
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def load_face(filename):
+    path = os.path.join(BASE_DIR, "faces", filename)
+    img = pygame.image.load(path).convert()
+    return pygame.transform.scale(img, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 faces = {
-    "annoyed": pygame.image.load('faces/annoyed.png').convert(),
-    "content": pygame.image.load('faces/content.png').convert(),
-    "angry": pygame.image.load('faces/angry.png').convert(),
-    "surprised": pygame.image.load('faces/surprised.png').convert(),
-    "surprised_dot": pygame.image.load('faces/surprised_dot.png').convert(),
-    "shocked": pygame.image.load('faces/shocked.png').convert(),
-    "worried": pygame.image.load('faces/worried.png').convert(),
-    "neutral": pygame.image.load('faces/neutral.png').convert(),
-    "skeptical": pygame.image.load('faces/skeptical.png').convert(),
-    "happy": pygame.image.load('faces/happy.png').convert(),
-    "bored": pygame.image.load('faces/bored.png').convert(),
-    "sad": pygame.image.load('faces/sad.png').convert(),
-    "afk": pygame.image.load('faces/afk.png').convert(),
-    "uwu": pygame.image.load('faces/uwu.png').convert(),
+    "annoyed": load_face('annoyed.png'),
+    "content": load_face('content.png'),
+    "angry": load_face('angry.png'),
+    "surprised": load_face('surprised.png'),
+    "surprised_dot": load_face('surprised_dot.png'),
+    "shocked": load_face('shocked.png'),
+    "worried": load_face('worried.png'),
+    "neutral": load_face('neutral.png'),
+    "skeptical": load_face('skeptical.png'),
+    "happy": load_face('happy.png'),
+    "bored": load_face('bored.png'),
+    "sad": load_face('sad.png'),
+    "afk": load_face('afk.png'),
+    "uwu": load_face('uwu.png'),
 }
 current_face = "uwu"
 
@@ -28,7 +36,7 @@ clock = pygame.optim = pygame.time.Clock()
 
 running = True
 while running:
-    screen.blit(faces[current_face])
+    screen.blit(faces[current_face], (0, 0))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
