@@ -31,16 +31,19 @@ sudo apt update
 
 sudo apt install python3.10 python3.10-venv python3.10-dev -y
 
-
 python3.10 -m venv venv
-
 
 source venv/bin/activate
 
+python -m pip install --upgrade pip setuptools wheel
 
-pip install --upgrade pip setuptools wheel
+python -m pip install --upgrade "pip<24.1"
 
-pip install "pip<24.1"
+python -m pip install "setuptools<81"
+
+python -m pip install --force-reinstall \
+  "torch==2.5.1" "torchaudio==2.5.1" \
+  --index-url https://download.pytorch.org/whl/cpu
 
 pip install ollama gTTS rvc-python
 
@@ -89,3 +92,11 @@ curl -L -o rvc_models/BMO.zip https://huggingface.co/Freaky98/CGO-adventure-time
 unzip rvc_models/BMO.zip
 
 rm rvc_models/BMO.zip
+
+Microphone
+------------
+
+sudo apt install -y portaudio19-dev python3-dev
+
+python -m pip install SpeechRecognition PyAudio
+
