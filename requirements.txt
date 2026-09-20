@@ -1,0 +1,6 @@
+ollama
+gTTS
+rvc-python
+SpeechRecognition
+PyAudio
+pygame
