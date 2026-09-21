@@ -1,0 +1,12 @@
+ollama:
+  model: "llama3.2:3b"
+  prompt: "You are Beemo, a friendly little robot companion.
+           Reply naturally using no more than 10 words."
+  options:
+    num_predict: 24
+    num_ctx: 256
+    num_thread: 4
+    temperature: 0.55
+    top_p: 0.85
+    repeat_penalty: 1.1
+  keep_alive: -1
