@@ -15,22 +15,15 @@ def load_face(filename):
     return pygame.transform.scale(img, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 faces = {
-    "annoyed": load_face('annoyed.png'),
-    "content": load_face('content.png'),
-    "angry": load_face('angry.png'),
-    "surprised": load_face('surprised.png'),
-    "surprised_dot": load_face('surprised_dot.png'),
-    "shocked": load_face('shocked.png'),
-    "worried": load_face('worried.png'),
-    "neutral": load_face('neutral.png'),
-    "skeptical": load_face('skeptical.png'),
-    "happy": load_face('happy.png'),
-    "bored": load_face('bored.png'),
-    "sad": load_face('sad.png'),
-    "afk": load_face('afk.png'),
-    "uwu": load_face('uwu.png'),
+    "angry": load_face('angry/angry_01.png'),
+    "bored": load_face('bored/bored_01.png'),
+    "idle": load_face('idle/idle_01.png'),
+    "happy": load_face('happy/happy_01.png'),
+    "curious": load_face('curious/curious_01.png'),
+    "sad": load_face('sad/sad_01.png'),
+    "surprised": load_face('surprised/surprised_01.png'),
 }
-current_face = "uwu"
+current_face = "happy"
 
 clock = pygame.optim = pygame.time.Clock()
 
@@ -46,13 +39,13 @@ while running:
             elif event.key == pygame.K_1:
                 current_face = "happy"
             elif event.key == pygame.K_2:
-                current_face = "annoyed"
+                current_face = "bored"
             elif event.key == pygame.K_3:
                 current_face = "angry"
             elif event.key == pygame.K_4:
                 current_face = "surprised"
             elif event.key == pygame.K_5:
-                current_face = "shocked"
+                current_face = "sad"
 
     pygame.display.flip()
     clock.tick(30)

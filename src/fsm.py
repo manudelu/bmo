@@ -31,10 +31,10 @@ class BMO:
 
         state_faces = {
             BMOState.IDLE: "happy",
-            BMOState.LISTEN: "surprised_dot",
-            BMOState.THINK: "skeptical",
+            BMOState.LISTEN: "curious",
+            BMOState.THINK: "idle",
             BMOState.SPEAK: "surprised",
-            BMOState.ERROR: "worried",
+            BMOState.ERROR: "sad",
         }
 
         if new_state in state_faces:

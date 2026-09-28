@@ -27,20 +27,13 @@ class Display():
 
     def load_faces(self) -> dict[str, pygame.Surface]:
         return {
-            "annoyed": self.load_face('annoyed.png'),
-            "content": self.load_face('content.png'),
-            "angry": self.load_face('angry.png'),
-            "surprised": self.load_face('surprised.png'),
-            "surprised_dot": self.load_face('surprised_dot.png'),
-            "shocked": self.load_face('shocked.png'),
-            "worried": self.load_face('worried.png'),
-            "neutral": self.load_face('neutral.png'),
-            "skeptical": self.load_face('skeptical.png'),
-            "happy": self.load_face('happy.png'),
-            "bored": self.load_face('bored.png'),
-            "sad": self.load_face('sad.png'),
-            "afk": self.load_face('afk.png'),
-            "uwu": self.load_face('uwu.png'),
+            "angry": self.load_face('angry/angry_01.png'),
+            "bored": self.load_face('bored/bored_01.png'),
+            "idle": self.load_face('idle/idle_01.png'),
+            "happy": self.load_face('happy/happy_01.png'),
+            "curious": self.load_face('curious/curious_01.png'),
+            "sad": self.load_face('sad/sad_01.png'),
+            "surprised": self.load_face('surprised/surprised_01.png'),
         }
 
     def show(self, face_name: str) -> None:
