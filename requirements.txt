@@ -1,6 +1,4 @@
-ollama
-gTTS
-rvc-python
-SpeechRecognition
-PyAudio
-pygame
+ollama==0.6.2
+pygame==2.6.1
+piper-tts==1.8.0
+PyYAML==6.0.3

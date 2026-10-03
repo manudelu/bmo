@@ -2,82 +2,114 @@
 set -Eeuo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly VENV_DIR="${BMO_VENV_DIR:-${SCRIPT_DIR}/venv}"
-readonly PYTHON_BIN="${PYTHON_BIN:-python3.10}"
-readonly OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
-readonly RVC_DIR="${SCRIPT_DIR}/rvc_models"
-readonly RVC_ARCHIVE="${RVC_DIR}/BMO.zip"
-readonly RVC_URL="https://huggingface.co/Freaky98/CGO-adventure-time-BMO-rvc-v2-420e/resolve/main/CGO-adventure-time-BMO-rvc-v2-420e.zip"
+readonly VENV_DIR="${BMO_VENV_DIR:-${SCRIPT_DIR}/.venv}"
+readonly PYTHON_BIN="${PYTHON_BIN:-python3}"
+readonly WHISPER_DIR="${SCRIPT_DIR}/third_party/whisper.cpp"
+readonly PIPER_DIR="${SCRIPT_DIR}/models/piper"
 
-log() {
-    printf '\n==> %s\n' "$*"
-}
+log() { printf '\n==> %s\n' "$*"; }
+fail() { printf '\n%s\n' "$*" >&2; exit 1; }
 
-if [[ "$(uname -s)" != "Linux" ]]; then
-    printf 'This installer currently supports Linux only.\n' >&2
-    exit 1
-fi
-
-if ! command -v apt-get >/dev/null 2>&1; then
-    printf 'This installer requires an apt-based distribution.\n' >&2
-    exit 1
-fi
+[[ "$(uname -s)" == Linux ]] || fail "Setup supports Linux only (including WSL)."
+case "$(uname -m)" in
+    x86_64|aarch64) ;;
+    *) fail "Use a 64-bit OS: x86_64 or aarch64 (Raspberry Pi OS 64-bit)." ;;
+esac
+command -v apt-get >/dev/null || fail "Setup requires an apt-based distribution."
 
 if [[ ${EUID} -eq 0 ]]; then
     SUDO=()
-elif command -v sudo >/dev/null 2>&1; then
+elif command -v sudo >/dev/null; then
     SUDO=(sudo)
 else
-    printf 'sudo is required to install system packages.\n' >&2
-    exit 1
+    fail "sudo is required to install system packages."
 fi
 
-log "Installing system dependencies"
+log "Installing build tools, Python, and audio utilities"
 "${SUDO[@]}" apt-get update
 "${SUDO[@]}" apt-get install -y \
-    software-properties-common curl unzip ffmpeg alsa-utils flac \
-    portaudio19-dev python3-dev mpg321
+    git build-essential cmake curl ca-certificates zstd \
+    python3 python3-venv python3-dev \
+    alsa-utils libasound2-plugins pulseaudio-utils
 
-if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
-    log "Installing Python 3.10"
-    "${SUDO[@]}" add-apt-repository ppa:deadsnakes/ppa -y
-    "${SUDO[@]}" apt-get update
-    "${SUDO[@]}" apt-get install -y python3.10 python3.10-dev python3.10-venv
-fi
+command -v "${PYTHON_BIN}" >/dev/null || fail "Python not found: ${PYTHON_BIN}"
+"${PYTHON_BIN}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
+    || fail "BMO requires Python 3.10 or newer. Set PYTHON_BIN to a supported interpreter."
 
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
-    log "Creating Python virtual environment at ${VENV_DIR}"
+    log "Creating virtual environment at ${VENV_DIR}"
     "${PYTHON_BIN}" -m venv "${VENV_DIR}"
-else
-    log "Virtual environment already exists; skipping creation"
 fi
 readonly VENV_PYTHON="${VENV_DIR}/bin/python"
+"${VENV_PYTHON}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
+    || fail "The existing virtual environment needs Python 3.10 or newer."
 
 log "Installing Python dependencies"
-"${VENV_PYTHON}" -m pip install --upgrade "pip<24.1" "setuptools<81" wheel
-"${VENV_PYTHON}" -m pip install \
-    torch==2.5.1 torchaudio==2.5.1 \
-    --index-url https://download.pytorch.org/whl/cpu
+# Pygame 2.6.1 imports pkg_resources, supplied by older setuptools.
+"${VENV_PYTHON}" -m pip install --upgrade pip "setuptools<81" wheel
 "${VENV_PYTHON}" -m pip install -r "${SCRIPT_DIR}/requirements.txt"
 
-if ! command -v ollama >/dev/null 2>&1; then
-    log "Installing Ollama"
-    curl --fail --show-error --silent --location \
-        https://ollama.com/install.sh | sh
+log "Initializing the pinned Whisper submodule"
+git -C "${SCRIPT_DIR}" submodule update --init --recursive -- third_party/whisper.cpp
+
+log "Building Whisper for this machine"
+cmake -S "${WHISPER_DIR}" -B "${WHISPER_DIR}/build" -DCMAKE_BUILD_TYPE=Release
+cmake --build "${WHISPER_DIR}/build" --parallel 4
+
+log "Downloading Whisper base.en model"
+if [[ ! -s "${WHISPER_DIR}/models/ggml-base.en.bin" ]]; then
+    sh "${WHISPER_DIR}/models/download-ggml-model.sh" base.en
+else
+    log "Whisper model already present"
 fi
 
-log "Downloading Ollama model ${OLLAMA_MODEL}"
+log "Downloading Piper voice"
+mkdir -p "${PIPER_DIR}"
+if [[ ! -s "${PIPER_DIR}/en_US-lessac-medium.onnx" || \
+      ! -s "${PIPER_DIR}/en_US-lessac-medium.onnx.json" ]]; then
+    "${VENV_PYTHON}" -m piper.download_voices en_US-lessac-medium --data-dir "${PIPER_DIR}"
+else
+    log "Piper voice already present"
+fi
+
+if ! command -v ollama >/dev/null; then
+    log "Installing Ollama"
+    # pipefail prevents a failed download from being reported as success.
+    curl --fail --show-error --silent --location https://ollama.com/install.sh | sh
+fi
+
+OLLAMA_URL="${OLLAMA_HOST:-http://127.0.0.1:11434}"
+[[ "${OLLAMA_URL}" == *://* ]] || OLLAMA_URL="http://${OLLAMA_URL}"
+if ! curl --fail --silent --max-time 3 "${OLLAMA_URL%/}/api/tags" >/dev/null; then
+    if command -v systemctl >/dev/null && systemctl cat ollama.service >/dev/null 2>&1; then
+        log "Starting Ollama service"
+        "${SUDO[@]}" systemctl start ollama.service
+    fi
+    ollama_ready=false
+    for attempt in {1..10}; do
+        if curl --fail --silent --max-time 3 "${OLLAMA_URL%/}/api/tags" >/dev/null; then
+            ollama_ready=true
+            break
+        fi
+        sleep 1
+    done
+    if [[ "${ollama_ready}" != true ]]; then
+        fail "Ollama is unreachable at ${OLLAMA_URL}. Start 'ollama serve' in another terminal, check OLLAMA_HOST, then rerun ./setup.sh."
+    fi
+fi
+
+OLLAMA_MODEL="$("${VENV_PYTHON}" - "${SCRIPT_DIR}/config/agent.yaml" <<'CONFIG_PY'
+import sys
+import yaml
+with open(sys.argv[1]) as config_file:
+    print(yaml.safe_load(config_file)["ollama"]["model"])
+CONFIG_PY
+)"
+readonly OLLAMA_MODEL
+log "Downloading configured Ollama model ${OLLAMA_MODEL}"
 ollama pull "${OLLAMA_MODEL}"
 
-if [[ ! -f "${RVC_DIR}/CGO_e420_s2520.pth" ]]; then
-    log "Downloading BMO voice model"
-    mkdir -p "${RVC_DIR}"
-    curl --fail --location --output "${RVC_ARCHIVE}" "${RVC_URL}"
-    unzip -o "${RVC_ARCHIVE}" -d "${RVC_DIR}"
-    rm -f -- "${RVC_ARCHIVE}"
-else
-    log "BMO voice model already present; skipping download"
+printf '\nSetup complete. Run BMO with:\n  %q %q\n' "${VENV_PYTHON}" "${SCRIPT_DIR}/src/fsm.py"
+if [[ -n "${PULSE_SERVER:-}" ]]; then
+    printf '\nFor the WSLg microphone, prefix that command with:\n  PULSE_SOURCE=RDPSource BMO_CAPTURE_DEVICE=pulse BMO_PLAYER=paplay\n'
 fi
-
-printf '\nInstallation complete.\nActivate the environment with:\n  source %q/bin/activate\n' "${VENV_DIR}"
-printf 'Run BMO with:\n  python %q/src/bmo_brain.py\n' "${SCRIPT_DIR}"

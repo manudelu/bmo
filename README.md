@@ -20,83 +20,67 @@ Future Additions
 * USB microphone
 * Speaker
 * Custom PCB for button control (using Raspberry Pi 5 GPIO)
+* Raspberry Pi AI HAT+ 2 (Hailo-10H AI accelerator and 8GB of on‑board RAM)
 
 
-Setup Venv
+Setup
 ------------
 
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-
-sudo apt update
-
-sudo apt install python3.10 python3.10-venv python3.10-dev -y
-
-python3.10 -m venv venv
-
-source venv/bin/activate
-
-python -m pip install --upgrade pip setuptools wheel
-
-python -m pip install --upgrade "pip<24.1"
-
-python -m pip install "setuptools<81"
-
-python -m pip install --force-reinstall \
-  "torch==2.5.1" "torchaudio==2.5.1" \
-  --index-url https://download.pytorch.org/whl/cpu
-
-pip install ollama gTTS rvc-python
+Target: Raspberry Pi 5 with 8 GB RAM and Raspberry Pi OS 64-bit.
 
 
-Ollama
-----------
+```bash
+git clone --recurse-submodules <repository-url> bmo
+cd bmo
+./setup.sh
+```
 
-Install Ollama (open-source platform that lets you download and run large language models (LLMs) directly on your own local computer): 
+For an existing checkout, just run `./setup.sh`. It:
 
+- Creates or reuses `.venv/` using the system `python3`.
+- Installs the Python dependencies in `requirements.txt`.
+- Builds `third_party/whisper.cpp` for the current machine.
+- Downloads Whisper `base.en` and Piper `en_US-lessac-medium` if missing.
+- Installs Ollama if needed and downloads the model in `config/agent.yaml`.
 
-curl -fsSL https://ollama.com/install.sh | sh
+If Ollama is not running and no systemd service is available, start
+`ollama serve` in another terminal and rerun setup.
 
-
-Download the model (Meta's Llama 3.2 model 3 billion parameters):
-
-
-ollama run llama3.2:3b 
-
-
-pip install ollama
-
-
-Give BMO a voice
---------------------
-
-sudo apt update && sudo apt install mpg321 -y
-
-pip install gTTS
-
-
-Cloning BMO voice
------------------
-
-sudo apt install ffmpeg -y 
-
-pip install --upgrade pip setuptools wheel cython
-
-pip install rvc-python
-
-cd ~/bmo
-
-mkdir -p rvc_models
-
-curl -L -o rvc_models/BMO.zip https://huggingface.co/Freaky98/CGO-adventure-time-BMO-rvc-v2-420e/resolve/main/CGO-adventure-time-BMO-rvc-v2-420e.zip
-
-unzip rvc_models/BMO.zip
-
-rm rvc_models/BMO.zip
-
-Microphone
+Run BMO
 ------------
 
-sudo apt install -y portaudio19-dev python3-dev
+```bash
+.venv/bin/python src/fsm.py
+```
 
-python -m pip install SpeechRecognition PyAudio
+Focus the BMO window and press Space. Speak within the five-second recording
+window. BMO transcribes with Whisper, asks Ollama, generates speech with Piper,
+and returns to idle after playback. Escape, Q, or closing the window exits.
+Recording and inference run in workers so face animations remain responsive.
 
+On the Pi, `arecord` and `aplay` use the default ALSA devices. To select a
+microphone, find its card/device with `arecord -l`, then use, for example:
+
+```bash
+BMO_CAPTURE_DEVICE=plughw:2,0 .venv/bin/python src/fsm.py
+```
+
+Replace `2,0` with your microphone's actual card and device numbers.
+`BMO_PLAYER` selects the playback executable; playback uses that player's
+default output device.
+
+Models and configuration
+------------
+
+- `config/agent.yaml`: Ollama model, prompt, and generation settings. Setup
+  downloads this exact model. The current setting is `llama3.2:3b`; for a
+  lighter Pi baseline, set it to `llama3.2:1b` and rerun setup.
+- `third_party/whisper.cpp/models/ggml-base.en.bin`: current English
+  speech-recognition model. Its runtime path is in `src/speech.py`.
+- `models/piper/en_US-lessac-medium.onnx` and its `.onnx.json` file:
+  current English voice. Its runtime path is also in `src/speech.py`.
+
+Upstream documentation:
+[Whisper](https://github.com/ggml-org/whisper.cpp),
+[Piper](https://github.com/OHF-Voice/piper1-gpl),
+[Ollama Linux setup](https://docs.ollama.com/linux).

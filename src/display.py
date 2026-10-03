@@ -7,7 +7,7 @@ faces_path = BASE_DIR / "faces"
 
 class Display:
     def __init__(self, width: int = 800, height: int = 400):
-        pygame.init()
+        pygame.display.init()
 
         self.width = width
         self.height = height
@@ -41,14 +41,7 @@ class Display:
         self.frame_index = 0
         self.last_frame_at = pygame.time.get_ticks()
 
-    def update(self) -> bool:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_ESCAPE, pygame.K_q):
-                    return False
-
+    def update(self) -> None:
         frames = self.faces[self.current_face]
         now = pygame.time.get_ticks()
         if now - self.last_frame_at >= self.frame_ms:
@@ -63,7 +56,6 @@ class Display:
 
         pygame.display.flip()
         self.clock.tick(30)
-        return True
 
     def close(self):
         pygame.quit()
