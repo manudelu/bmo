@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 import ollama
-import yaml
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-config_path = BASE_DIR / "config" / "agent.yaml"
+from bmo_config import load_config
 
 class OllamaAgent:
     def __init__(self, model: str = None, prompt: str = None):
-        with open(config_path, 'r') as f:
-            self.data = yaml.safe_load(f)
+        self.data = load_config()
 
         ollama_config = self.data["ollama"]
         

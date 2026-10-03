@@ -10,3 +10,12 @@ ollama:
     top_p: 0.85
     repeat_penalty: 1.1
   keep_alive: -1
+
+speech:
+  record_seconds: 5
+  whisper:
+    model: "base.en"
+    language: "en"
+    threads: 4
+  piper:
+    voice: "en_US-lessac-medium"

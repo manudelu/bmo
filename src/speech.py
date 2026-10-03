@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import io
 import os
 import subprocess
@@ -6,22 +7,26 @@ import wave
 from pathlib import Path
 
 from piper import PiperVoice
+from bmo_config import load_config
 
 
 ROOT = Path(__file__).resolve().parent.parent
 
 class Speech:
     def __init__(self):
+        config = load_config()["speech"]
+        self.record_seconds = config["record_seconds"]
+        self.language = config["whisper"]["language"]
+        self.threads = config["whisper"]["threads"]
         self.whisper = (
             ROOT / "third_party/whisper.cpp/build/bin/whisper-cli"
         )
         self.whisper_model = (
-            #ROOT / "third_party/whisper.cpp/models/ggml-tiny.en.bin"
-            ROOT / "third_party/whisper.cpp/models/ggml-base.en.bin"    
-            #ROOT / "third_party/whisper.cpp/models/ggml-base.bin"    
+            ROOT / "third_party/whisper.cpp/models"
+            / f"ggml-{config['whisper']['model']}.bin"
         )
         self.voice_model = (
-            ROOT / "models/piper/en_US-lessac-medium.onnx"
+            ROOT / "models/piper" / f"{config['piper']['voice']}.onnx"
         )
 
         self.capture_device = os.getenv(
@@ -40,7 +45,7 @@ class Speech:
             recording = folder / "input.wav"
             transcript = folder / "transcript"
 
-            print("Listening for five seconds...")
+            print(f"Listening for {self.record_seconds} seconds...")
             subprocess.run(
                 [
                     "arecord",
@@ -48,11 +53,11 @@ class Speech:
                     "-f", "S16_LE",
                     "-r", "16000",
                     "-c", "1",
-                    "-d", "5",
+                    "-d", str(self.record_seconds),
                     str(recording),
                 ],
                 check=True,
-                timeout=10,
+                timeout=self.record_seconds + 5,
             )
 
             print("Transcribing...")
@@ -61,8 +66,8 @@ class Speech:
                     str(self.whisper),
                     "-m", str(self.whisper_model),
                     "-f", str(recording),
-                    "-l", "en",
-                    "-t", "4",
+                    "-l", self.language,
+                    "-t", str(self.threads),
                     "-ng",
                     "-otxt",
                     "-of", str(transcript),

@@ -49,6 +49,21 @@ log "Installing Python dependencies"
 "${VENV_PYTHON}" -m pip install --upgrade pip "setuptools<81" wheel
 "${VENV_PYTHON}" -m pip install -r "${SCRIPT_DIR}/requirements.txt"
 
+MODEL_SETTINGS="$("${VENV_PYTHON}" - "${SCRIPT_DIR}/src" <<'CONFIG_PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+from bmo_config import load_config
+config = load_config()
+print(config["ollama"]["model"])
+print(config["speech"]["whisper"]["model"])
+print(config["speech"]["piper"]["voice"])
+CONFIG_PY
+)"
+readarray -t MODEL_SETTINGS_LINES <<< "${MODEL_SETTINGS}"
+readonly OLLAMA_MODEL="${MODEL_SETTINGS_LINES[0]}"
+readonly WHISPER_MODEL="${MODEL_SETTINGS_LINES[1]}"
+readonly PIPER_VOICE="${MODEL_SETTINGS_LINES[2]}"
+
 log "Initializing the pinned Whisper submodule"
 git -C "${SCRIPT_DIR}" submodule update --init --recursive -- third_party/whisper.cpp
 
@@ -56,18 +71,18 @@ log "Building Whisper for this machine"
 cmake -S "${WHISPER_DIR}" -B "${WHISPER_DIR}/build" -DCMAKE_BUILD_TYPE=Release
 cmake --build "${WHISPER_DIR}/build" --parallel 4
 
-log "Downloading Whisper base.en model"
-if [[ ! -s "${WHISPER_DIR}/models/ggml-base.en.bin" ]]; then
-    sh "${WHISPER_DIR}/models/download-ggml-model.sh" base.en
+log "Downloading Whisper ${WHISPER_MODEL} model"
+if [[ ! -s "${WHISPER_DIR}/models/ggml-${WHISPER_MODEL}.bin" ]]; then
+    sh "${WHISPER_DIR}/models/download-ggml-model.sh" "${WHISPER_MODEL}"
 else
     log "Whisper model already present"
 fi
 
 log "Downloading Piper voice"
 mkdir -p "${PIPER_DIR}"
-if [[ ! -s "${PIPER_DIR}/en_US-lessac-medium.onnx" || \
-      ! -s "${PIPER_DIR}/en_US-lessac-medium.onnx.json" ]]; then
-    "${VENV_PYTHON}" -m piper.download_voices en_US-lessac-medium --data-dir "${PIPER_DIR}"
+if [[ ! -s "${PIPER_DIR}/${PIPER_VOICE}.onnx" || \
+      ! -s "${PIPER_DIR}/${PIPER_VOICE}.onnx.json" ]]; then
+    "${VENV_PYTHON}" -m piper.download_voices "${PIPER_VOICE}" --data-dir "${PIPER_DIR}"
 else
     log "Piper voice already present"
 fi
@@ -98,14 +113,6 @@ if ! curl --fail --silent --max-time 3 "${OLLAMA_URL%/}/api/tags" >/dev/null; th
     fi
 fi
 
-OLLAMA_MODEL="$("${VENV_PYTHON}" - "${SCRIPT_DIR}/config/agent.yaml" <<'CONFIG_PY'
-import sys
-import yaml
-with open(sys.argv[1]) as config_file:
-    print(yaml.safe_load(config_file)["ollama"]["model"])
-CONFIG_PY
-)"
-readonly OLLAMA_MODEL
 log "Downloading configured Ollama model ${OLLAMA_MODEL}"
 ollama pull "${OLLAMA_MODEL}"
 

@@ -2,8 +2,8 @@ BMO - Adventure Time AI Agent
 =============================
 
 <p align="center">
-  <img src="images/BMO_front.png" alt="Fusion 360 - BMO Front" width="45%">
-  <img src="images/BMO_back.png" alt="Fusion 360 - BMO Back" width="48.7%">
+  <img src="docs/images/BMO_front.png" alt="Fusion 360 - BMO Front" width="45%">
+  <img src="docs/images/BMO_back.png" alt="Fusion 360 - BMO Back" width="48.7%">
 </p>
 
 
@@ -40,11 +40,18 @@ For an existing checkout, just run `./setup.sh`. It:
 - Creates or reuses `.venv/` using the system `python3`.
 - Installs the Python dependencies in `requirements.txt`.
 - Builds `third_party/whisper.cpp` for the current machine.
-- Downloads Whisper `base.en` and Piper `en_US-lessac-medium` if missing.
+- Downloads the Whisper model and Piper voice selected in `config/agent.yaml` if missing.
 - Installs Ollama if needed and downloads the model in `config/agent.yaml`.
 
 If Ollama is not running and no systemd service is available, start
 `ollama serve` in another terminal and rerun setup.
+
+Models and configuration
+------------
+
+Edit `config/agent.yaml` to select both the assistant and speech models. Both setup and the application read this file. After changing a model or voice, rerun `./setup.sh` to download it, then restart BMO.
+
+The `ollama` section controls the assistant model, prompt, and generation settings.
 
 Run BMO
 ------------
@@ -68,17 +75,6 @@ BMO_CAPTURE_DEVICE=plughw:2,0 .venv/bin/python src/fsm.py
 Replace `2,0` with your microphone's actual card and device numbers.
 `BMO_PLAYER` selects the playback executable; playback uses that player's
 default output device.
-
-Models and configuration
-------------
-
-- `config/agent.yaml`: Ollama model, prompt, and generation settings. Setup
-  downloads this exact model. The current setting is `llama3.2:3b`; for a
-  lighter Pi baseline, set it to `llama3.2:1b` and rerun setup.
-- `third_party/whisper.cpp/models/ggml-base.en.bin`: current English
-  speech-recognition model. Its runtime path is in `src/speech.py`.
-- `models/piper/en_US-lessac-medium.onnx` and its `.onnx.json` file:
-  current English voice. Its runtime path is also in `src/speech.py`.
 
 Upstream documentation:
 [Whisper](https://github.com/ggml-org/whisper.cpp),
