@@ -75,6 +75,9 @@ class BMO:
                     print(f"BMO error {error}")
                     self.transition_to(BMOState.ERROR)
         finally:
+            self.speech.close()
+            if self.input_thread is not None:
+                self.input_thread.join(timeout=2)
             self.display.close()
 
     def handle_events(self):

@@ -60,8 +60,10 @@ Run BMO
 .venv/bin/python src/fsm.py
 ```
 
-Focus the BMO window and press Space. Speak within the five-second recording
-window. BMO transcribes with Whisper, asks Ollama, generates speech with Piper,
+Focus the BMO window and press Space. Begin speaking within five seconds,
+then pause to finish your question. BMO stops after 900 ms of silence or at
+the 15-second limit. Silent input is skipped. BMO transcribes with Whisper,
+asks Ollama, generates speech with Piper,
 and returns to idle after playback. Escape, Q, or closing the window exits.
 Recording and inference run in workers so face animations remain responsive.
 

@@ -5,9 +5,11 @@ import subprocess
 import tempfile
 import wave
 from pathlib import Path
+from threading import Event
 
 from piper import PiperVoice
 from bmo_config import load_config
+from recording import record_pcm, SAMPLE_RATE
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -15,7 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 class Speech:
     def __init__(self):
         config = load_config()["speech"]
-        self.record_seconds = config["record_seconds"]
+        self.recording_settings = config["recording"]
+        self.stop_event = Event()
         self.language = config["whisper"]["language"]
         self.threads = config["whisper"]["threads"]
         self.whisper = (
@@ -45,20 +48,16 @@ class Speech:
             recording = folder / "input.wav"
             transcript = folder / "transcript"
 
-            print(f"Listening for {self.record_seconds} seconds...")
-            subprocess.run(
-                [
-                    "arecord",
-                    "-D", self.capture_device,
-                    "-f", "S16_LE",
-                    "-r", "16000",
-                    "-c", "1",
-                    "-d", str(self.record_seconds),
-                    str(recording),
-                ],
-                check=True,
-                timeout=self.record_seconds + 5,
-            )
+            print("Listening... speak, then pause to finish.")
+            pcm = record_pcm(self.capture_device, self.recording_settings, self.stop_event)
+            if not pcm or self.stop_event.is_set():
+                print("No speech captured.")
+                return ""
+            with wave.open(str(recording), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(SAMPLE_RATE)
+                wav_file.writeframes(pcm)
 
             print("Transcribing...")
             result = subprocess.run(
@@ -84,6 +83,9 @@ class Speech:
             text = transcript.with_suffix(".txt").read_text().strip()
             print(f"You: {text}")
             return text
+
+    def close(self):
+        self.stop_event.set()
 
     def synthesize(self, text):
         if self.voice is None:

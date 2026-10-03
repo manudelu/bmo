@@ -12,7 +12,13 @@ ollama:
   keep_alive: -1
 
 speech:
-  record_seconds: 5
+  recording:
+    start_timeout_seconds: 5
+    max_seconds: 15
+    silence_ms: 900
+    pre_roll_ms: 300
+    min_speech_ms: 250
+    vad_mode: 2
   whisper:
     model: "base.en"
     language: "en"
