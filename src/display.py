@@ -6,14 +6,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 faces_path = BASE_DIR / "faces"
 
 class Display:
-    def __init__(self, width: int = 800, height: int = 400):
+    def __init__(self, width: int = 800, height: int = 500):
         pygame.display.init()
 
         self.width = width
         self.height = height
         self.screen = pygame.display.set_mode(
             (self.width, self.height),
-            # pygame.NOFRAME | pygame.FULLSCREEN
+            pygame.NOFRAME | pygame.FULLSCREEN
         )
         self.clock = pygame.time.Clock()
 
